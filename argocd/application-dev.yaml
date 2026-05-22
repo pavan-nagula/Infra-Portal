@@ -16,6 +16,7 @@ spec:
     targetRevision: main
     path: helm/infra-portal
     helm:
+      releaseName: infra-portal
       valueFiles:
         - values.yaml
         - values-dev.yaml
