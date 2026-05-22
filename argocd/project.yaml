@@ -6,7 +6,7 @@ metadata:
 spec:
   description: Infrastructure Provisioning Portal
   sourceRepos:
-    - "https://github.com/cubic-aws/infra-portal-python.git"
+    - "https://github.com/pavan-nagula/Infra-Portal.git"
   destinations:
     - namespace: infra-portal
       server: https://kubernetes.default.svc
