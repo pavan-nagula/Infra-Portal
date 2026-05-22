@@ -12,13 +12,14 @@ spec:
   project: infra-portal
 
   source:
-    repoURL: https://github.com/cubic-aws/infra-portal-python.git
-    targetRevision: develop
+    repoURL: https://github.com/pavan-nagula/Infra-Portal.git
+    targetRevision: main
     path: helm/infra-portal
     helm:
       valueFiles:
         - values.yaml
         - values-dev.yaml
+        - values-local.yaml
 
   destination:
     server: https://kubernetes.default.svc
@@ -29,7 +30,6 @@ spec:
       prune: true
       selfHeal: true
     syncOptions:
-      - CreateNamespace=true
       - PruneLast=true
       - ApplyOutOfSyncOnly=true
     retry:
