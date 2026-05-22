@@ -1,0 +1,21 @@
+externalSecrets:
+  clustersRegister:
+    enabled: true
+    clusters:
+      {{ cluster_name }}:
+        server: "{{ server_url }}"
+        account: "{{ aws_account_id }}"
+        environment: "{{ full_env_name }}"
+        region: "{{ aws_region }}"
+        vpcId: "{{ vpc_id }}"
+        defaultBranch: "{{ default_branch }}"
+        useChartRelease: "true"
+        autoSync: "{{ auto_sync }}"
+        prune: "{{ prune }}"
+        selfHeal: "{{ self_heal }}"
+        labels:
+          project: "{{ project_name }}"
+          cloud-provider: "aws"
+        annotations:
+          project: "{{ project_name }}"
+          app-of-apps-chart-branch: "{{ chart_branch }}"

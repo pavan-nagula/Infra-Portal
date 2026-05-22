@@ -1,0 +1,15 @@
+externalSecrets:
+  clustersRegister:
+    enabled: true
+    clusters:
+      {{ cluster_name }}:
+        clusterType: app
+        services:
+          # Override infra defaults
+          appconfig:
+            enabled: true
+          istio-gw:
+            enabled: true
+          istio-certs:
+            enabled: true
+            branch: "{{ default_branch }}"

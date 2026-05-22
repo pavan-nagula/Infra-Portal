@@ -1,0 +1,25 @@
+# ============================
+# Local minikube overrides
+# Used on top of values.yaml + values-dev.yaml
+# ============================
+
+backend:
+  image:
+    repository: infra-portal-backend
+    tag: local
+    pullPolicy: Never        # critical: image is in minikube's docker, don't try to pull from ECR
+  serviceAccountName: default  # minikube has no IRSA; use namespace's default SA
+  secrets:
+    githubToken: ""           # leave empty → backend runs in mock mode
+    apiKey: ""
+
+ui:
+  image:
+    repository: infra-portal-ui
+    tag: local
+    pullPolicy: Never
+  serviceAccountName: default
+
+# Disable the ALB ingress (it needs AWS Load Balancer Controller, not available in minikube)
+ingress:
+  enabled: false

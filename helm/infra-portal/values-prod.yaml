@@ -1,0 +1,63 @@
+# ============================
+# Prod environment overrides
+# ============================
+
+namespace: infra-portal
+
+backend:
+  replicaCount: 3
+  profile: prod
+  securityEnabled: "true"
+  corsAllowedOrigins: "https://infra-portal.cubic.com"
+  terminationGracePeriodSeconds: 90
+
+  image:
+    tag: ""  # Set by ArgoCD image updater or CI
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 768Mi
+    limits:
+      cpu: "2"
+      memory: 1536Mi
+
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 8
+    targetCPUUtilization: 65
+    targetMemoryUtilization: 75
+
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfied: DoNotSchedule
+      labelSelector:
+        matchLabels:
+          app.kubernetes.io/component: backend
+
+ui:
+  replicaCount: 2
+
+  image:
+    tag: ""
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 64Mi
+    limits:
+      cpu: 300m
+      memory: 128Mi
+
+ingress:
+  host: infra-portal.cubic.com
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internal
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/certificate-arn: ""  # Set your prod ACM cert ARN
+    alb.ingress.kubernetes.io/healthcheck-path: /healthz
+    alb.ingress.kubernetes.io/wafv2-acl-arn: ""  # Optional: WAF ACL

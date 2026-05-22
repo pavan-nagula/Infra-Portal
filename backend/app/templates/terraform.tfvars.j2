@@ -1,0 +1,377 @@
+environment   = "{{ environment_name }}"
+business      = "{{ business }}"
+platform_name = "{{ platform_name }}"
+
+tags = {
+  Environment = "{{ environment_name }}"
+  Team        = "{{ business }}"
+  Application = "EKS"
+  Terraform   = "true"
+}
+
+create_cross_cluster_iam = {{ create_cross_cluster_iam | lower }}
+deploy_api_gateway       = {{ deploy_api_gateway | lower }}
+
+app_config_management = {
+  create = {{ app_config_create | lower }}
+  sops_kms_key = {
+    deletion_window_in_days = {{ sops_kms_deletion_window }}
+    create_replica          = {{ sops_kms_create_replica | lower }}
+  }
+  github_actions_org_repo_name_list = [{{ github_actions_org_repo_list_formatted }}]
+}
+
+# --------------------------------------------------------------------------------------------
+# Bastion Configuration
+# --------------------------------------------------------------------------------------------
+bastion_configuration = {
+  deploy_bastion         = {{ deploy_bastion | lower }}
+  ami_id                 = "{{ bastion_ami_id }}"
+  instance_type          = "{{ bastion_instance_type }}"
+  name                   = "{{ bastion_name }}"
+  egress_cidr_blocks     = [{{ bastion_egress_cidr_formatted }}]
+  egress_security_groups = [{{ bastion_egress_sgs_formatted }}]
+  iam_role_path          = "{{ bastion_iam_role_path }}"
+}
+
+# ---------------------------------------------------------------------------------------
+# VPC {{ vpc_primary_region }}
+# ---------------------------------------------------------------------------------------
+vpc_primary = {
+  ### Module Controls
+  create_vpc                       = {{ create_vpc_primary | lower }}
+  create_internet_gateway          = {{ vpc_create_internet_gateway | lower }}
+  create_nat_gateway               = {{ vpc_create_nat_gateway | lower }}
+  create_vpc_endpoints             = {{ vpc_create_vpc_endpoints | lower }}
+  create_egress_network_firewall   = {{ vpc_create_egress_firewall | lower }}
+  create_eks_control_plane_subnets = {{ vpc_create_eks_cp_subnets | lower }}
+
+  ### Availability Zones
+  availability_zones = [{{ vpc_primary_azs_formatted }}]
+
+  ### Basic VPC Configuration
+  environment_tier    = "{{ environment_tier }}"
+  vpc_type            = "workload"
+  ipam_pool_name      = "{{ vpc_ipam_pool_name }}"
+  ipv4_netmask_length = {{ vpc_primary_netmask }}
+  workload_subnet_cidrs = {
+    app               = { "newbits" = 4, "netnum" = 0 }   # /23
+    secure            = { "newbits" = 5, "netnum" = 6 }   # /24
+    frontend          = { "newbits" = 5, "netnum" = 9 }   # /24
+    dmz               = { "newbits" = 5, "netnum" = 12 }  # /24
+    mbo               = { "newbits" = 5, "netnum" = 15 }  # /24
+    eks_control_plane = { "newbits" = 5, "netnum" = 18 }  # /24
+    aws_services      = { "newbits" = 8, "netnum" = 168 } # /27
+    waf               = { "newbits" = 8, "netnum" = 171 } # /27
+    vwan              = { "newbits" = 8, "netnum" = 174 } # /27
+    firewall          = { "newbits" = 8, "netnum" = 177 } # /27
+  }
+  nat_gateway_deployment = "{{ vpc_nat_gw_deployment }}"
+  vpc_endpoints          = [{{ vpc_endpoints_primary_formatted }}]
+
+  ### Optional configurations
+  enable_flow_logs         = {{ vpc_enable_flow_logs | lower }}
+  flow_logs_retention_days = {{ vpc_flow_logs_retention }}
+
+  ### Transit Gateway Configuration
+  attach_to_transit_gateway                 = {{ vpc_attach_tgw | lower }}
+  transit_gateway_route_table_to_attach     = "{{ vpc_tgw_rt_attach }}"
+  transit_gateway_route_tables_to_propagate = [{{ vpc_tgw_rt_propagate_formatted }}]
+  tgw_subnet_names                          = [{{ vpc_tgw_subnet_names_formatted }}]
+  tgw_destination_cidrs                     = [{{ vpc_tgw_dest_cidrs_formatted }}]
+
+  ### Private Hosted Zone Configuration
+  associate_with_private_hosted_zones        = {{ vpc_associate_phz | lower }}
+  private_hosted_zones_prod_to_associate     = []
+  private_hosted_zones_non_prod_to_associate = ["{{ phz_domain }}"]
+  connect_to_phz                             = {{ vpc_connect_to_phz | lower }}
+
+  app_subnet_custom_tags = {
+    "{{ app_subnet_tag_role_key }}"    = "{{ app_subnet_tag_role_value }}"
+    "{{ app_subnet_tag_cluster_key }}" = "{{ app_subnet_tag_cluster_value }}"
+  }
+}
+{% if create_vpc_secondary %}
+
+# -----------------------------------------------------------------------------------
+# VPC {{ vpc_secondary_region }}
+# -----------------------------------------------------------------------------------
+vpc_secondary = {
+  ### Module Controls
+  create_vpc                       = true
+  create_internet_gateway          = {{ vpc_create_internet_gateway | lower }}
+  create_nat_gateway               = {{ vpc_create_nat_gateway | lower }}
+  create_vpc_endpoints             = {{ vpc_create_vpc_endpoints | lower }}
+  create_egress_network_firewall   = {{ vpc_create_egress_firewall | lower }}
+  create_eks_control_plane_subnets = {{ vpc_create_eks_cp_subnets | lower }}
+
+  ### Availability Zones
+  availability_zones = [{{ vpc_secondary_azs_formatted }}]
+
+  ### Basic VPC Configuration
+  environment_tier    = "{{ environment_tier }}"
+  vpc_type            = "workload"
+  ipam_pool_name      = "{{ vpc_ipam_pool_name }}"
+  ipv4_netmask_length = {{ vpc_secondary_netmask }}
+  workload_subnet_cidrs = {
+    app               = { "newbits" = 4, "netnum" = 0 }   # /23
+    secure            = { "newbits" = 5, "netnum" = 6 }   # /24
+    frontend          = { "newbits" = 5, "netnum" = 9 }   # /24
+    dmz               = { "newbits" = 5, "netnum" = 12 }  # /24
+    mbo               = { "newbits" = 5, "netnum" = 15 }  # /24
+    eks_control_plane = { "newbits" = 5, "netnum" = 18 }  # /24
+    aws_services      = { "newbits" = 8, "netnum" = 168 } # /27
+    waf               = { "newbits" = 8, "netnum" = 171 } # /27
+    vwan              = { "newbits" = 8, "netnum" = 174 } # /27
+    firewall          = { "newbits" = 8, "netnum" = 177 } # /27
+  }
+  nat_gateway_deployment = "{{ vpc_nat_gw_deployment }}"
+  vpc_endpoints          = [{{ vpc_endpoints_secondary_formatted }}]
+
+  ### Optional configurations
+  enable_flow_logs         = {{ vpc_enable_flow_logs | lower }}
+  flow_logs_retention_days = {{ vpc_flow_logs_retention }}
+
+  ### Transit Gateway Configuration
+  attach_to_transit_gateway                 = {{ vpc_attach_tgw | lower }}
+  transit_gateway_route_table_to_attach     = "{{ vpc_tgw_rt_attach }}"
+  transit_gateway_route_tables_to_propagate = [{{ vpc_tgw_rt_propagate_formatted }}]
+  tgw_subnet_names                          = [{{ vpc_tgw_subnet_names_formatted }}]
+  tgw_destination_cidrs                     = [{{ vpc_tgw_dest_cidrs_formatted }}]
+
+  ### Private Hosted Zone Configuration
+  associate_with_private_hosted_zones        = {{ vpc_associate_phz | lower }}
+  private_hosted_zones_prod_to_associate     = []
+  private_hosted_zones_non_prod_to_associate = ["{{ phz_domain }}"]
+  connect_to_phz                             = {{ vpc_connect_to_phz | lower }}
+
+  app_subnet_custom_tags = {
+    "{{ app_subnet_tag_role_key }}"    = "{{ app_subnet_tag_role_value }}"
+    "{{ app_subnet_tag_cluster_key }}" = "{{ app_subnet_tag_cluster_value }}"
+  }
+}
+{% endif %}
+
+# ------------------------------------------------------------------------------------
+# VPC Flow Logs - IAM Module Configuration - Global
+# ------------------------------------------------------------------------------------
+vpc_flow_logs_iam = {
+  ### Role configuration
+  create_role           = true
+  trusted_role_services = ["vpc-flow-logs.amazonaws.com"]
+
+  ### Policy configuration
+  create_policy = true
+}
+
+# ------------------------------------------------------------------------------------
+# Firewall Rules
+# ------------------------------------------------------------------------------------
+ingress_web_rules = <<EOT
+# Ingress web traffic rules
+
+# Allow HTTP/HTTPS traffic to web applications
+# pass tcp any any -> $HOME_NET [80,443] (msg:"Allow HTTP/HTTPS traffic to web applications"; flow:to_server; sid:1000001; rev:1;)
+EOT
+
+allow_https_domains = [
+  ".fedoraproject.org",
+  "ctscubic.service-now.com",
+  "oraclecloud-updates-ksplice.oracle.com",
+  "cts-cubic.vssps.visualstudio.com",
+  "update.googleapis.com",
+  "autodiscover.cubic.com",
+  "crl4.digicert.com",
+  "cubic.com",
+  "download.windowsupdate.com",
+  "androidpay-partners.googleapis.com",
+  ".apple.com",
+  "pax.us",
+  "cubicus.jfrog.io",
+  "frog.io",
+  "archive.apache.org",
+  "api.paxstore.us",
+  "www.paxstore.us",
+  "mpush.paxstore.us",
+  "auth.paxstore.us",
+  "cubic.paxstore.us",
+  "lbs.map.qq.com",
+  "cc.map.qq.com",
+  ".messagemedia.com",
+  ".microsoft.com",
+  ".windows.net",
+  "go.microsoft.com",
+  ".cloudsink.net",
+  "www.googleapis.com",
+  "maps.googleapis.com",
+  "play.google.com",
+  "accounts.google.com",
+  "whatpos.skyhook.com",
+  "connectivitycheck.android.com",
+  "gcm-http.googleapis.com",
+  "fcm.googleapis.com",
+  "product.connect.nginx.com",
+  ".amazonaws.com",
+  ".us-west-2.amazonaws.com",
+  ".s3.us-west-2.amazonaws.com",
+  ".sts.amazonaws.com",
+  ".us-east-1.amazonaws.com",
+  ".s3.us-east-1.amazonaws.com",
+  ".github.com",
+  ".api.github.com",
+  ".actions.githubusercontent.com",
+  ".codeload.github.com",
+  ".pkg.actions.githubusercontent.com",
+  ".ghcr.io",
+  ".results-receiver.actions.githubusercontent.com",
+  ".blob.core.windows.net",
+  ".github-cloud.githubusercontent.com",
+  ".github-cloud.s3.amazonaws.com"
+]
+
+blocked_countries = [
+  # Africa
+  "AF", "DZ", "AO", "BJ", "BW", "BF", "BI", "CM", "CV", "CF", "TD", "KM", "CG", "CD", "DJ",
+  "EG", "GQ", "ER", "SZ", "ET", "GA", "GM", "GH", "GN", "GW", "CI", "KE", "LS", "LR", "LY",
+  "MG", "MW", "ML", "MR", "MU", "MA", "MZ", "NA", "NE", "NG", "RW", "ST", "SN", "SC", "SL",
+  "SO", "ZA", "SS", "SD", "TZ", "TG", "TN", "UG", "ZM", "ZW",
+  # South America
+  "AR", "BO", "BR", "CL", "CO", "EC", "GY", "PY", "PE", "SR", "UY", "VE",
+  # Other specific countries
+  "CN", "HR", "IR", "KP", "LB", "NL", "PK", "PS", "RU", "SY", "UA", "YE", "TR", "HK", "PH", "BY"
+]
+
+block_all_traffic_rule = <<EOT
+# Default deny rule for all traffic
+# drop tcp $HOME_NET any -> $EXTERNAL_NET any (msg:"Default deny new outbound TCP"; flow:to_server, established; sid:9999; rev:2;)
+EOT
+
+advanced_ids_rules = <<EOT
+# Basic IDS rules - Minimal guaranteed baseline
+
+# Basic Log4j detection
+alert http any any -> any any (msg:"Log4j exploitation attempt"; flow:established,to_server; content:"jndi:"; nocase; sid:99000001; rev:1;)
+
+# Basic SQL Injection detection
+alert http any any -> any any (msg:"SQL Injection attempt"; flow:established,to_server; content:"'"; content:" or 1=1"; nocase; sid:99000002; rev:1;)
+
+# Suspicious User-Agent detection
+alert http any any -> any any (msg:"Suspicious User-Agent"; flow:established,to_server; content:"curl"; nocase; sid:99000003; rev:1;)
+
+# Non-standard SSH port detection
+alert tcp any any -> any !22 (msg:"SSH on non-standard port"; flow:established,to_server; content:"SSH-"; depth:4; sid:99000004; rev:1;)
+EOT
+
+threat_detection_rules = <<EOT
+# Basic threat detection rules
+
+# Obsolete TLS detection
+reject tls any any -> any any (msg:"TLS 1.0/1.1 detected"; flow:established; content:"|03 01|"; depth:2; sid:2023001; rev:1;)
+
+# High-risk port blocking
+drop tcp any any -> any [445,135,139,3389] (msg:"High-risk port blocked"; sid:2023002; rev:1;)
+
+# Simple port scanning detection
+alert tcp any any -> any any (msg:"Possible port scanning"; flags:S; flow:stateless; sid:2023003; rev:1;)
+EOT
+{% if create_eks %}
+
+# ---------------------------------------------------------------------------------------------
+# EKS Cluster
+# ---------------------------------------------------------------------------------------------
+argocd_mgmt_account_id = "{{ eks_argocd_mgmt_account_id }}"
+
+eks_clusters = {
+  "{{ eks_cluster_name }}" = {
+    create_eks_module = true
+
+    # Cluster settings
+    create_argocd              = {{ eks_create_argocd | lower }}
+    cluster_name               = "{{ eks_cluster_name }}"
+    cluster_version            = "{{ eks_cluster_version }}"
+    cluster_enabled_log_types  = [{{ eks_cluster_enabled_log_types_formatted }}]
+    authentication_mode        = "{{ eks_authentication_mode }}"
+    endpoint_private_access    = {{ eks_endpoint_private_access | lower }}
+    endpoint_public_access     = {{ eks_endpoint_public_access | lower }}
+    create_nlb_for_eks_cluster = {{ eks_create_nlb_for_eks_cluster | lower }}
+
+    # EKS OIDC settings
+    oidc_client_id_list  = ["sts.amazonaws.com"]
+    oidc_thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
+
+    # IAM SSO access settings
+    iam_access = {
+      admin_sso = {
+        role = "{{ eks_iam_admin_sso_role_arn }}"
+        policies = {
+          cluster = "AmazonEKSClusterAdminPolicy"
+        }
+      }
+    }
+    iam_roles_path = "{{ eks_iam_roles_path }}"
+
+    # Node Group settings
+    create_nodegroup = {{ eks_create_nodegroup | lower }}
+
+    # Cluster Add-ons settings
+    cluster_public_access_cidrs = [{{ eks_cluster_public_access_cidrs_formatted }}]
+
+    # CoreDNS settings
+    create_coredns  = true
+    coredns_version = "{{ eks_coredns_version }}"
+    coredns_config_values = {
+      computeType = "Fargate"
+    }
+    coredns_sa_role_arn    = null
+    create_fargate_coredns = true
+
+    # Kube-proxy settings
+    create_kubeproxy        = true
+    kubeproxy_version       = "{{ eks_kubeproxy_version }}"
+    kubeproxy_config_values = {}
+    kubeproxy_sa_role_arn   = null
+
+    # VPC-CNI settings
+    create_vpccni  = true
+    vpccni_version = "{{ eks_vpccni_version }}"
+    vpccni_config_values = {
+      env = {
+        ENABLE_PREFIX_DELEGATION = "false"
+        WARM_PREFIX_TARGET       = "1"
+        WARM_ENI_TARGET          = "0"
+        MINIMUM_IP_TARGET        = "0"
+      }
+      enableWindowsIpam             = "true"
+      enableWindowsPrefixDelegation = "false"
+      warmWindowsIPTarget           = 1
+      minimumWindowsIPTarget        = 3
+    }
+    vpccni_sa_role_arn = null
+
+    # EBS-CSI settings
+    create_ebscsi        = {{ eks_create_ebscsi | lower }}
+    ebscsi_version       = "{{ eks_ebscsi_version }}"
+    ebscsi_config_values = {}
+
+    # Mountpoint S3 CSI settings
+    create_mountpoint_s3_csi  = true
+    mountpoint_s3_csi_version = "{{ eks_mountpoint_s3_csi_version }}"
+    mountpoint_s3_csi_config_values = {
+      node = {
+        tolerateAllTaints = true
+      }
+    }
+    mountpoint_s3_csi_sa_role_arn = "{{ eks_mountpoint_s3_csi_sa_role_arn }}"
+
+    # Networking arguments
+    pci_cluster                      = {{ eks_pci_cluster | lower }}
+    enable_cross_zone_load_balancing = {{ eks_enable_cross_zone_load_balancing | lower }}
+
+    # Additional tags for this specific cluster
+    additional_tags = {
+      Environment = "{{ environment_name }}"
+      Terraform   = "true"
+    }
+  }
+}
+{% endif %}

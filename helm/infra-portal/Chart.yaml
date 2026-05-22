@@ -1,0 +1,12 @@
+apiVersion: v2
+name: infra-portal
+description: Helm chart for Infrastructure Provisioning Portal (Backend + UI)
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - infrastructure
+  - terraform
+  - portal
+maintainers:
+  - name: CTS Platform Team

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "infra-portal.fullname" . }}-ui
+  labels:
+    {{- include "infra-portal.ui.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
+  selector:
+    {{- include "infra-portal.ui.selectorLabels" . | nindent 4 }}
